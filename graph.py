@@ -19,7 +19,7 @@ def data2graph(datafile,outdir,cut=True):
     print(mmedian)
     burnstart = data[data["平均推力[N]"] > mmedian+20].iloc[0]["データ取得開始時"]
      
-    mdf=data[(data["データ取得開始時"]>burnstart-500000)&(data["データ取得開始時"]<burnstart+8000000)&(data["推力[N]"]>mmedian+10)].copy()
+    mdf=data[(data["データ取得開始時"]>burnstart-1000000)&(data["データ取得開始時"]<burnstart+8000000)&(data["推力[N]"]>mmedian+10)].copy()
     #時間調整
     mdf["データ取得開始時"] = (mdf["データ取得開始時"] - burnstart) /1000000
 
@@ -32,10 +32,19 @@ def data2graph(datafile,outdir,cut=True):
     mdf["補正推力[N]"] = mdf["推力[N]"] - mmedian
 
     burntotalimpulse = mdf[mdf["データ取得開始時"] < burnend]["補正推力[N]"].sum() * 0.001
-    operationgtotalimpulse = mdf[mdf["補正推力[N]"] > mdf["補正推力[N]"].max()*0.05]["補正推力[N]"].sum() * 0.001
-    print("作動時間トータルインパルス:",operationgtotalimpulse)
-    print("燃焼トータルインパルス:",burntotalimpulse)
-    
+    mask = mdf["補正推力[N]"] > mdf["補正推力[N]"].max() * 0.05
+    operationgtotalimpulse = mdf[mask]["補正推力[N]"].sum() * 0.001
+
+    # 作動時間トータルインパルスに寄与した最後のインデックス（データ取得開始時）を出力
+    if mask.any():
+        op_last_time = mdf[mask].iloc[-1]["データ取得開始時"]
+        print("operationgtotalimpulse 最後のデータ取得開始時:", op_last_time)
+    else:
+        print("operationgtotalimpulse に寄与するデータはありません")
+
+    print("作動時間トータルインパルス:", operationgtotalimpulse)
+    print("燃焼トータルインパルス:", burntotalimpulse)
+    print("燃焼時間平均推力:", burntotalimpulse / (burnend))
     
     ml = ["推力[N]","圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]","低域温度1","低域温度2","低域温度3","高域温度1","高域温度2"]
     
@@ -52,8 +61,6 @@ def data2graph(datafile,outdir,cut=True):
         plt.grid(True)
         plt.savefig(outdir + "/" + "全体推力[N].png")
         plt.close()
-    
-   
 
     x = mdf["データ取得開始時"].values
 
@@ -99,7 +106,6 @@ def data2graph(datafile,outdir,cut=True):
     
     fig.tight_layout()
     plt.savefig(outdir + "/" + "平均推力と圧力比較.png")
-    plt.show()
     plt.close()
 
     for colname in ml:
@@ -125,5 +131,5 @@ def data2graph(datafile,outdir,cut=True):
 if __name__ == "__main__":
     outdir = "codetest/out1"  
     os.makedirs(outdir, exist_ok=True)
-    datafile = "2025-12-06-02/converted.csv"  
+    datafile = "2025-12-06-01/converted.csv"  
     data2graph(datafile, outdir)

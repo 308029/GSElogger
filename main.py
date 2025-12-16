@@ -1,5 +1,5 @@
-import hattori_analysis as han
-import graph_new as graph
+import analysis as han
+import graph as graph
 import os
 
 maindir = "2025-12-06-02"
