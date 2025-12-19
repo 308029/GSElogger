@@ -10,7 +10,7 @@ def data2graph(source,target,loadcell_max_lbf=1000):
         reader = csv.reader(fr)
         with open(target, 'w', encoding='utf_8_sig',newline="") as fw:
              writer = csv.writer(fw)
-             writer.writerow(['書き込み待ちデータ数','データ取得開始時','データ取得終了時','推力[N]','圧力1[Pa]','圧力2[Pa]','圧力3[Pa]','圧力4[Pa]','低域温度1','低域温度2','低域温度3','高域温度1','高域温度2','バルブ'])
+             writer.writerow(['書き込み待ちデータ数','データ取得開始時','データ取得終了時','推力[N]','圧力1[Pa]','圧力2[Pa]','圧力3[Pa]','圧力4[Pa]','低域温度1[℃]','低域温度2[℃]','低域温度3[℃]','高域温度1[℃]','高域温度2[℃]','バルブ'])
              for row in reader:
                 # 1行ずつ読み込み
                 writer.writerow([row[0],row[1],row[2],str(bin2Thrust(int(row[3]),loadcell_max_lbf)),str(bin2dataPressure(int(row[5]))),str(bin2dataPressure(int(row[6]))),str(bin2dataPressure(int(row[7]))),str(bin2dataPressure(int(row[8]))),str(bin2dataTempLow(int(row[11]))),str(bin2dataTempLow(int(row[12]))),str(bin2dataTempLow2(int(row[13]))),str(bin2dataTempHigh(int(row[14]))),str(bin2dataTempHigh(int(row[15]))),row[19]])
