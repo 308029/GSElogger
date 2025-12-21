@@ -25,6 +25,22 @@ class graph_generator:
         plt.savefig(self.outdir + "/" + colname + ".png")
         plt.close()
 
+    def generate_graph_from_series(self,x_series,y_series,title):
+
+        # グラフ描画
+        plt.plot(x_series, y_series)
+        # タイトルとラベル
+        plt.title(title)
+        plt.xlabel("時間(s)")
+        plt.ylabel(y_series)
+
+        # グリッド
+        plt.grid(True)
+
+        # 保存
+        plt.savefig(self.outdir + "/" + title + ".png")
+        plt.close()
+
     def generate_overview_graph(self, timename,average_thurst_name,pressure_1_name,pressure_2_name, burnend, operationgtotalimpulse, burntotalimpulse):
         x = self.bdf[timename].values
         # 平均推力と圧力1、圧力2をtwinxで重ねて表示

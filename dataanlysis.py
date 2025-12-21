@@ -40,6 +40,7 @@ class Logger:
         print("燃焼開始時(micros)",self.burn_start_time)
         print("燃焼終了時(micros)",self.operation_end_time)
         self.bdf=self.df[(self.df[self.time_name]>self.burn_start_time-500000)&(self.df[self.time_name]<self.operation_end_time+500000)].copy()
+
         #時間調整
         self.bdf[self.time_name] = (self.bdf[self.time_name] - self.burn_start_time) /1000000
     
@@ -48,19 +49,21 @@ class Logger:
 
     def calcu_burn_start_time(self, average_thrust_series_name):
         series = self.df[average_thrust_series_name]
-        diff = series.diff() > 3
+        diff = series.diff() > 1
         groups = diff.groupby((diff != diff.shift()).cumsum())
         for name, group in groups:
             if group.iloc[0] and len(group) >= 10:
                 start_idx = group.index[0]
                 self.burn_start_time = self.df.loc[start_idx, self.time_name]
                 break
+        if self.burn_start_time is None:
+            self.burn_start_time = 0
         return self.burn_start_time
 
     def calcu_burn_end_time(self,average_thrust_name):
         self.bdf["偏差[N]"] = self.bdf[self.thrust_name] - self.bdf[average_thrust_name]
         self.bdf["偏差標準偏差[N]"] = self.bdf["偏差[N]"].rolling(window=100,min_periods=1).std()
-        self.burn_end_time = self.bdf[(self.bdf["偏差標準偏差[N]"] <50) & (self.bdf[self.time_name]>3)].iloc[0][self.time_name]
+        self.burn_end_time = self.bdf[(self.bdf["偏差標準偏差[N]"] >10)].iloc[-1][self.time_name]
         return self.burn_end_time
     
     def calcu_operation_end_time(self,correct_thurst_name):
