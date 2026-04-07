@@ -5,14 +5,14 @@ import pandas
 import os
 import time
 
-maindir = "logger試験"
-rawfile ="LOG.csv" #old logger LOG-0000001.csv new logger LOG.csv
-redatafile = "converted4.csv"
+maindir = "2025-12-20"
+rawfile ="LOG-0000001.csv" #old logger LOG-0000001.csv new logger LOG.csv
+redatafile = "converted.csv"
 
-outdir = "out4"
-mode="manual" #full or fast or manual
+outdir = "out3"
+mode="full" #full or fast or manual
 loadcell_max_lbf=500 #250 500 1000
-loggertype="new" # new or old
+loggertype="old" # new or old
 #!稼働時間表示
 #manual mode settings
 starttime = None
@@ -84,7 +84,7 @@ elif mode=="full":
     graph = graph_generator(aboutdir, logger.bdf, "データ取得開始時")
     print("Creating graphs...")
     start = time.time()
-    graph.generate_graph_from_series(logger.df["データ取得開始時"][::10000],logger.df["推力[N]"][::10000],"全体推力[N]")
+    graph.generate_graph_from_series(logger.df["データ取得開始時"][::1000],logger.df["推力[N]"][::1000],"全体推力[N]")
     graph.generate_general_graph(["推力[N]","補正推力[N]","平均推力[N]","偏差標準偏差[N]"],"推力関連.png")
     graph.generate_general_graph(["圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]"],"圧力.png")
     graph.generate_general_graph(["低域温度1[℃]","低域温度2[℃]","低域温度3[℃]","高域温度1[℃]","高域温度2[℃]"],"温度.png")
