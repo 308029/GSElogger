@@ -10,20 +10,25 @@ class Logger:
         #private
         self.df=pd.read_csv(self.filepath,header=0)
         self.bdf=None #burn data frame
-        self.df5=None
 
         #実験値
         self.loadcell_max_lbf=1000
 
         #public
-        self.ess=None #定常偏差
-        self.burn_start_time=None #燃焼開始時間
-        self.burn_end_time=None #燃焼終了時間
-        self.operation_end_time=None #作動時間終了時間
-        self.burn_totalimpulse=None #燃焼トータルインパルス
-        self.operating_totalimpulse=None #作動時間トータルインパルス
-        self.average_thrust=None #燃焼時間平均推力
-
+        self.calcu_moving_ave("推力[N]","平均推力[N]")
+        self.calcu_moving_ave("圧力1[Pa]","平均圧力1[Pa]")
+        self.calcu_moving_ave("圧力2[Pa]","平均圧力2[Pa]")
+        self.calcu_moving_ave("圧力3[Pa]","平均圧力3[Pa]")
+        self.calcu_moving_ave("圧力4[Pa]","平均圧力4[Pa]")
+        
+        self.burn_start_time= self.calcu_burn_start_time("平均推力[N]") #燃焼開始時間
+        self.ess=self.calcu_thrust_ess() #定常偏差
+        self.correct_thurst("補正推力[N]") #補正推力の計算
+        self.operation_end_time=self.calcu_operation_end_time("補正推力[N]") #作動時間終了時間
+        self.create_burndata() #燃焼データの作成
+        self.burn_end_time=self.calcu_burn_end_time("平均推力[N]") #燃焼終了時間
+        
+        self.burn_totalimpulse,self.operating_totalimpulse,self.average_thrust=self.calcu_totalimpulse("補正推力[N]") #燃焼トータルインパルス
         #マジックナンバー
         self.threshold_offset=20
 
@@ -33,9 +38,9 @@ class Logger:
     def calcu_thrust_ess(self):
         if self.burn_start_time is None:
             raise ValueError("燃焼開始時間が設定されていません。先にcalcu_burn_start_time()を実行してください。")
-        self.ess = self.df[self.df[self.time_name]<self.burn_start_time][self.thrust_name].median()
-        return self.ess
-    
+        ess = self.df[self.df[self.time_name]<self.burn_start_time][self.thrust_name].median()
+        return ess
+
     def create_burndata(self):
         print("燃焼開始時(micros)",self.burn_start_time)
         print("燃焼終了時(micros)",self.operation_end_time)
@@ -51,32 +56,33 @@ class Logger:
         series = self.df[average_thrust_series_name]
         diff = series.diff() > 1
         groups = diff.groupby((diff != diff.shift()).cumsum())
+        burn_start_time=0
         for name, group in groups:
             if group.iloc[0] and len(group) >= 10:
                 start_idx = group.index[0]
-                self.burn_start_time = self.df.loc[start_idx, self.time_name]
+                burn_start_time = self.df.loc[start_idx, self.time_name]
                 break
-        if self.burn_start_time is None:
-            self.burn_start_time = 0
-        return self.burn_start_time
+        if burn_start_time is None:
+            burn_start_time = 0
+        return burn_start_time
 
     def calcu_burn_end_time(self,average_thrust_name):
         self.bdf["偏差[N]"] = self.bdf[self.thrust_name] - self.bdf[average_thrust_name]
         self.bdf["偏差標準偏差[N]"] = self.bdf["偏差[N]"].rolling(window=100,min_periods=1).std()
-        self.burn_end_time = self.bdf[(self.bdf["偏差標準偏差[N]"] >10)].iloc[-1][self.time_name]
-        return self.burn_end_time
+        burn_end_time = self.bdf[(self.bdf["偏差標準偏差[N]"] >10)].iloc[-1][self.time_name]
+        return burn_end_time
     
     def calcu_operation_end_time(self,correct_thurst_name):
         mask = self.df[correct_thurst_name] > self.df[correct_thurst_name].max() * 0.05
         print("maxthurst", self.df[correct_thurst_name].max(),"N")
-        self.operation_end_time = self.df[mask].iloc[-1][self.time_name]
-        return self.operation_end_time
+        operation_end_time = self.df[mask].iloc[-1][self.time_name]
+        return operation_end_time
     def calcu_totalimpulse(self,correct_thurst_name):
-        self.burn_totalimpulse = self.bdf[self.bdf[self.time_name] < self.burn_end_time][correct_thurst_name].sum() * 0.001
+        burn_totalimpulse = self.bdf[self.bdf[self.time_name] < self.burn_end_time][correct_thurst_name].sum() * 0.001
         mask = self.bdf[correct_thurst_name] > self.bdf[correct_thurst_name].max() * 0.05
-        self.operating_totalimpulse = self.bdf[mask][correct_thurst_name].sum() * 0.001
-        self.average_thrust = self.burn_totalimpulse / (self.burn_end_time)
-        return self.burn_totalimpulse,self.operating_totalimpulse
+        operating_totalimpulse = self.bdf[mask][correct_thurst_name].sum() * 0.001
+        average_thrust = burn_totalimpulse / (self.burn_end_time)
+        return burn_totalimpulse,operating_totalimpulse,average_thrust
 
     
 
