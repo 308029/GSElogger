@@ -5,18 +5,18 @@ import pandas
 import os
 import time
 
-maindir = "2025-12-20"
+maindir = "2026-4-19-2"
 rawfile ="LOG-0000001.csv" #old logger LOG-0000001.csv new logger LOG.csv
 redatafile = "converted.csv"
 
-outdir = "out3"
-mode="full" #full or manual
+outdir = "out2"
+mode="manual" #full or manual
 loadcell_max_lbf=500 #250 500 1000
 loggertype="old" # new or old
 #!稼働時間表示
 #manual mode settings
-starttime = None
-endtime = None
+starttime = 798000000
+endtime = 810000000
 
 date = maindir
 abrawfile = os.path.join(maindir,rawfile)
@@ -31,11 +31,10 @@ start = time.time()
 RawConverter(abrawfile, abredatafile,loadcell_max_lbf,loggertype).convert()
 rawconvert_time = time.time() - start
 
-logger = Logger(abredatafile, aboutdir,"データ取得開始時","推力[N]")
-
-
 ml = ["推力[N]","補正推力[N]","平均推力[N]","偏差標準偏差[N]","圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]","低域温度1[℃]","低域温度2[℃]","低域温度3[℃]","高域温度1[℃]","高域温度2[℃]"]
 if mode=="full":
+    logger = Logger(abredatafile, aboutdir,"データ取得開始時","推力[N]")
+
     start = time.time()
     print("Analysing converted data...")
     analyzing_tiime = time.time() - start
@@ -74,7 +73,9 @@ elif mode=="manual":
         ccsv=ccsv[(ccsv["データ取得開始時"]>=starttime)]
     if(endtime is not None):
         ccsv=ccsv[(ccsv["データ取得開始時"]<=endtime)]
+    
     graph = graph_generator(aboutdir, ccsv, "データ取得開始時")
+    # graph.generate_graph_from_series()
     simple_list= ["推力[N]","圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]","低域温度1[℃]","低域温度2[℃]","低域温度3[℃]","高域温度1[℃]","高域温度2[℃]"]
     for colname in simple_list:
         graph.generate_general_graph([colname], colname)
