@@ -60,6 +60,14 @@ class RawConverter:
             self.convert_new()
         elif self.loggertype == "old":
             self.convert_old()
+        self.create_light()
+
+    def create_light(self):
+        light_rawfile = self.rawfile.replace(".csv", "_light.csv")
+        has_hdr = (self.loggertype == "new")
+        df = pl.read_csv(self.rawfile, has_header=has_hdr, ignore_errors=True)
+        df_light = df.gather_every(100)
+        df_light.write_csv(light_rawfile, include_bom=True)
     
     def convert_old(self):
         # 1. 読み込み（必要な列だけインデックスで指定）

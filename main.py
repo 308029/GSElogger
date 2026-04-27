@@ -5,20 +5,20 @@ import pandas
 import os
 import time
 
-maindir = "2026-4-19-2"
-rawfile ="LOG-0000001.csv" #old logger LOG-0000001.csv new logger LOG.csv
+maindir = "2026-04-22試験"
+rawfile ="LOG.csv" #old logger LOG-0000001.csv new logger LOG.csv
 redatafile = "converted.csv"
 
-outdir = "out2"
+outdir = "out"
 mode="manual" #full or manual
 loadcell_max_lbf=500 #250 500 1000
-loggertype="old" # new or old
+loggertype="new" # new or old
 #!稼働時間表示
 #manual mode settings
-starttime = 798000000
-endtime = 810000000
+starttime = None
+endtime = None
 
-date = maindir
+date = maindir 
 abrawfile = os.path.join(maindir,rawfile)
 abredatafile = os.path.join(maindir,redatafile)
 aboutdir = os.path.join(maindir,outdir)
@@ -76,6 +76,6 @@ elif mode=="manual":
     
     graph = graph_generator(aboutdir, ccsv, "データ取得開始時")
     # graph.generate_graph_from_series()
-    simple_list= ["推力[N]","圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]","低域温度1[℃]","低域温度2[℃]","低域温度3[℃]","高域温度1[℃]","高域温度2[℃]"]
-    for colname in simple_list:
-        graph.generate_general_graph([colname], colname)
+    graph.generate_general_graph(["推力[N]"],"推力.png")
+    graph.generate_general_graph(["圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]"],"圧力.png")
+    graph.generate_general_graph(["低域温度1[℃]","低域温度2[℃]","低域温度3[℃]","高域温度1[℃]","高域温度2[℃]"],"温度.png")
