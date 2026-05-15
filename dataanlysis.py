@@ -10,6 +10,7 @@ class Logger:
         #private
         self.df=pd.read_csv(self.filepath,header=0)
         self.bdf=None #burn data frame
+        self.bbdf=None #burn data frame
 
         #実験値
         self.loadcell_max_lbf=1000
@@ -45,9 +46,12 @@ class Logger:
         print("燃焼開始時(micros)",self.burn_start_time)
         print("燃焼終了時(micros)",self.operation_end_time)
         self.bdf=self.df[(self.df[self.time_name]>self.burn_start_time-500000)&(self.df[self.time_name]<self.operation_end_time+500000)].copy()
+        self.bbdf=self.df[(self.df[self.time_name]>=self.burn_start_time+3140000)&(self.df[self.time_name]<=self.operation_end_time)][[self.time_name,self.thrust_name]].copy()
 
         #時間調整
         self.bdf[self.time_name] = (self.bdf[self.time_name] - self.burn_start_time) /1000000
+        self.bbdf[self.time_name] = (self.bbdf[self.time_name] - self.burn_start_time-3140000) /1000000
+
     
     def correct_thurst(self,after_thurst_name):
         self.df[after_thurst_name] = self.df[self.thrust_name] - self.ess

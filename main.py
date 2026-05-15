@@ -5,18 +5,18 @@ import pandas
 import os
 import time
 
-maindir = "2026-04-22試験"
-rawfile ="LOG.csv" #old logger LOG-0000001.csv new logger LOG.csv
+maindir = "2026-05-09-2"
+rawfile ="LOG1.csv" #old logger LOG-0000001.csv new logger LOG.csv
 redatafile = "converted.csv"
 
-outdir = "out"
-mode="manual" #full or manual
+outdir = "out3"
+mode="full" #full or manual
 loadcell_max_lbf=500 #250 500 1000
 loggertype="new" # new or old
 #!稼働時間表示
 #manual mode settings
-starttime = None
-endtime = None
+starttime = 1750000000
+endtime = 2030000000
 
 date = maindir 
 abrawfile = os.path.join(maindir,rawfile)
@@ -37,11 +37,10 @@ if mode=="full":
 
     start = time.time()
     print("Analysing converted data...")
-    analyzing_tiime = time.time() - start
+    analyzing_time = time.time() - start
 
-    exportcsv = logger.bdf
-    exportcsv = exportcsv[exportcsv["データ取得開始時"]>0]
-    exportcsv.to_csv(os.path.join(aboutdir,"burntime3.csv"))
+    exportcsv = logger.bbdf
+    exportcsv.to_csv(os.path.join(aboutdir,"operationthurst.csv"), index=False, header=False)
     print("----------")
     print("定常偏差",round(logger.ess,1),"N")
     print("燃焼終了時間",logger.burn_end_time,"s")
@@ -65,7 +64,7 @@ if mode=="full":
     graph.generate_overview_graph("データ取得開始時","平均推力[N]",["平均圧力1[Pa]"],logger.burn_end_time,operationendrelative,logger.operating_totalimpulse,logger.burn_totalimpulse,date)
     graph.generate_overview_graph("データ取得開始時","補正推力[N]",None,logger.burn_end_time,operationendrelative,logger.operating_totalimpulse,logger.burn_totalimpulse,date)
 
-    print("raw解析時間: {}s\nデータ分析時間: {}s \nグラフ生成時間: {}s".format(rawconvert_time, analyzing_tiime, generate_graph_time))
+    print("raw解析時間: {}s\nデータ分析時間: {}s \nグラフ生成時間: {}s".format(rawconvert_time, analyzing_time, generate_graph_time))
 elif mode=="manual":
     print("Manual mode generationg graph...")
     ccsv = pandas.read_csv(abredatafile)
