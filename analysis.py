@@ -1,6 +1,5 @@
 import polars as pl
-import numpy as np
-import time
+import os
 
 class RawConverter:
     def __init__(self, rawfile, outputfile,loadcell_max_lbf,loggertype):
@@ -10,7 +9,6 @@ class RawConverter:
         self.loggertype = loggertype
         # --- 定数定義 ---
         self.VOLTAGE_REF_5V = 4.99
-        self.AMP_GAIN = 47.0
 
         self.R0 = 10000
         self.T0 = 25 + 273.15
@@ -18,7 +16,7 @@ class RawConverter:
         self.Temp_B = 3435
 
         self.HighTemp_R = 10000
-        self.LowTemp_R = 1000#?100
+        self.LowTemp_R = 1000
         
 
     # --- 計算ロジック（エクスプレッションを返す関数） ---
@@ -60,10 +58,10 @@ class RawConverter:
             self.convert_new()
         elif self.loggertype == "old":
             self.convert_old()
-        self.create_light()
 
     def create_light(self):
-        light_rawfile = self.rawfile.replace(".csv", "_light.csv")
+        out_dir = os.path.dirname(self.outputfile)
+        light_rawfile = os.path.join(out_dir, "LOG_light.csv")
         has_hdr = (self.loggertype == "new")
         df = pl.read_csv(self.rawfile, has_header=has_hdr, ignore_errors=True)
         df_light = df.gather_every(100)
@@ -126,15 +124,3 @@ class RawConverter:
 
         # 3. 書き出し
         df_result.write_csv(self.outputfile, include_bom=True)
-
-if __name__ == "__main__":
-    inputfilepath = "codetest/LOG-0000001.csv"
-    outputfilepath = "codetest/converted.csv"
-    
-    print("変換開始...")
-    start = time.time()
-    raw2data = RawConverter(inputfilepath, outputfilepath, 500, "new")
-    raw2data.convert()
-    end = time.time()
-    print("完了！")
-    print("処理時間 (秒):", (end- start))

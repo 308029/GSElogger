@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import japanize_matplotlib
+import os
 
 class graph_generator:
     def __init__(self, outdir, bdf, timename):
@@ -10,7 +11,7 @@ class graph_generator:
 
         self.mc = 1 #overview graph用の連番
 
-    def generate_general_graph(self,colname,title,imshow=False):
+    def generate_general_graph(self, colname, title):
         # 2x2の計4枚を1枚にまとめる例
         fig, axs = plt.subplots(len(colname),1, figsize=(12, 4 * len(colname)), squeeze=False)
         # axsは2次元配列になるので平坦化するとループしやすい
@@ -30,25 +31,8 @@ class graph_generator:
             axs_flat[i].grid(which='minor', lw=0.4) # 補助目盛の描画
 
         plt.tight_layout()
-        plt.savefig(self.outdir + "/" + title, dpi=100)
-        if imshow:
-            plt.show()
+        plt.savefig(os.path.join(self.outdir, title), dpi=100)
         plt.close(fig)
-
-    def generate_graph_from_series(self,x_series,y_series,title):
-
-        # グラフ描画
-        plt.plot(x_series, y_series)
-        # タイトルとラベル
-        plt.title(title)
-        plt.xlabel("時間(s)")
-
-        # グリッド
-        plt.grid(True)
-
-        # 保存
-        plt.savefig(self.outdir + "/" + title + ".png")
-        plt.close()
 
     def generate_overview_graph(self, timename,thurst_name,pressure_name, burnend, opend,operationgtotalimpulse, burntotalimpulse,date):
         x = self.bdf[timename].values
@@ -62,19 +46,21 @@ class graph_generator:
         # ax1.tick_params(axis='y', labelcolor="blue")
         ax1.grid(True, alpha=0.3)
         
-        # 右Y軸：圧力1、圧力2
+        # 右Y軸：圧力
         if pressure_name is not None:
             ax2 = ax1.twinx()
             ax2.set_ylabel('圧力[Pa]')
-            colorlist = ['orange', 'green', 'red', 'purple']
-            for i in range(len(pressure_name)):
-                ax2.plot(x, self.bdf[pressure_name[i]].values,color=colorlist[i], label=pressure_name[i],alpha=0.5)
+            ax2.plot(x, self.bdf[pressure_name].values, color='orange', label=pressure_name, alpha=0.5)
+            
         # タイトルと凡例
-        plt.title('推力と圧力データ({})'.format(date))
+        if pressure_name is not None:
+            plt.title('推力と圧力データ({})'.format(date))
+        else:
+            plt.title('推力データ({})'.format(date))
         
         # burnend時間に赤い縦線を引く
-        ax1.axvline(x=burnend, color='red', linewidth=2, label='燃焼終了時間({})'.format(burnend))
-        ax1.axvline(x=opend, color='blue', linewidth=2, label='作動終了時間({})'.format(opend))
+        ax1.axvline(x=burnend, color='red', linewidth=2, label=f'燃焼終了時間({burnend:.3f})')
+        ax1.axvline(x=opend, color='blue', linewidth=2, label=f'作動終了時間({opend:.3f})')
         
         # 凡例を統合
         lines1, labels1 = ax1.get_legend_handles_labels()
@@ -90,6 +76,11 @@ class graph_generator:
                 verticalalignment='top', horizontalalignment='right', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
         
         fig.tight_layout()
-        plt.savefig(self.outdir + "/" + "推力と圧力比較" + str(self.mc) + ".png")
+        safe_thurst_name = thurst_name.replace("/", "／")
+        if pressure_name is not None:
+            safe_pressure_name = pressure_name.replace("/", "／")
+            plt.savefig(os.path.join(self.outdir, f"{safe_thurst_name}_{safe_pressure_name}.png"))
+        else:
+            plt.savefig(os.path.join(self.outdir, f"{safe_thurst_name}_のみ.png"))
         self.mc += 1
         plt.close()
