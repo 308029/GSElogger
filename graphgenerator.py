@@ -34,6 +34,22 @@ class graph_generator:
         plt.savefig(os.path.join(self.outdir, title), dpi=100)
         plt.close(fig)
 
+    def generate_graph_from_series(self,x_series,y_series,title):
+
+        # グラフ描画
+        plt.plot(x_series, y_series)
+        # タイトルとラベル
+        plt.title(title)
+        plt.xlabel("時間(s)")
+        plt.ylabel(y_series)
+
+        # グリッド
+        plt.grid(True)
+
+        # 保存
+        plt.savefig(self.outdir + "/" + title + ".png")
+        plt.close()
+        
     def generate_overview_graph(self, timename,thurst_name,pressure_name, burnend, opend,operationgtotalimpulse, burntotalimpulse,date):
         x = self.bdf[timename].values
         # 平均推力と圧力1、圧力2をtwinxで重ねて表示
@@ -48,9 +64,17 @@ class graph_generator:
         
         # 右Y軸：圧力
         if pressure_name is not None:
+            if isinstance(pressure_name, str):
+                pressures = [pressure_name]
+            else:
+                pressures = list(pressure_name)
+                
             ax2 = ax1.twinx()
             ax2.set_ylabel('圧力[Pa]')
-            ax2.plot(x, self.bdf[pressure_name].values, color='orange', label=pressure_name, alpha=0.5)
+            colors = ['orange', 'green', 'red', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
+            for idx, p_col in enumerate(pressures):
+                color = colors[idx % len(colors)]
+                ax2.plot(x, self.bdf[p_col].values, color=color, label=p_col, alpha=0.5)
             
         # タイトルと凡例
         if pressure_name is not None:
@@ -78,7 +102,8 @@ class graph_generator:
         fig.tight_layout()
         safe_thurst_name = thurst_name.replace("/", "／")
         if pressure_name is not None:
-            safe_pressure_name = pressure_name.replace("/", "／")
+            safe_p_names = [p.replace("/", "／") for p in pressures]
+            safe_pressure_name = "_".join(safe_p_names)
             plt.savefig(os.path.join(self.outdir, f"{safe_thurst_name}_{safe_pressure_name}.png"))
         else:
             plt.savefig(os.path.join(self.outdir, f"{safe_thurst_name}_のみ.png"))

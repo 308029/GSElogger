@@ -285,12 +285,50 @@ class LoggerGUI(QWidget):
         self.burn_line.sigPositionChanged.connect(self.update_burn_line)
         self.burn_line.hide()  # 最初は非表示
 
+        # カーソル位置表示用のクロスヘアとラベル
+        self.vLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('gray', style=Qt.PenStyle.DashLine))
+        self.hLine = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen('gray', style=Qt.PenStyle.DashLine))
+        self.plot_widget.addItem(self.vLine, ignoreBounds=True)
+        self.plot_widget.addItem(self.hLine, ignoreBounds=True)
+        
+        self.cursor_label = pg.TextItem(anchor=(0, 1), fill=(255, 255, 255, 200))
+        self.plot_widget.addItem(self.cursor_label, ignoreBounds=True)
+        
+        self.proxy = pg.SignalProxy(self.plot_widget.scene().sigMouseMoved, rateLimit=60, slot=self.mouse_moved)
+
         # 時間入力欄が変更されたら解析ボタンの有効/無効を判定する
         self.starttime_input.textChanged.connect(self.check_run_btn_state)
         self.endtime_input.textChanged.connect(self.check_run_btn_state)
         self.burn_endtime_input.textChanged.connect(self.check_run_btn_state)
 
         self.setLayout(main_layout)
+
+    def mouse_moved(self, evt):
+        pos = evt[0]
+        if self.plot_widget.sceneBoundingRect().contains(pos):
+            mousePoint = self.plot_widget.plotItem.vb.mapSceneToView(pos)
+            x_val = mousePoint.x()
+            self.vLine.setPos(x_val)
+            
+            y_val = mousePoint.y()
+            if self.preview_df is not None and not self.preview_df.empty:
+                x_data = self.preview_df["データ取得開始時"].values
+                y_data = self.preview_df["推力[N]"].values
+                if x_val <= x_data[0]:
+                    y_val = y_data[0]
+                elif x_val >= x_data[-1]:
+                    y_val = y_data[-1]
+                else:
+                    idx = self.preview_df["データ取得開始時"].searchsorted(x_val)
+                    if idx > 0 and idx < len(x_data):
+                        if abs(x_data[idx] - x_val) < abs(x_data[idx-1] - x_val):
+                            y_val = y_data[idx]
+                        else:
+                            y_val = y_data[idx-1]
+                            
+            self.hLine.setPos(y_val)
+            self.cursor_label.setPos(x_val, y_val)
+            self.cursor_label.setHtml(f"<div style='text-align: left;'><span style='color: black; font-size: 10pt; font-weight: bold;'>時間: {x_val:.0f}<br>推力: {y_val:.2f} N</span></div>")
 
     def check_run_btn_state(self):
         if (self.starttime_input.text().strip() and 
@@ -356,6 +394,9 @@ class LoggerGUI(QWidget):
                 self.plot_widget.clear()
                 self.plot_widget.addItem(self.region)
                 self.plot_widget.addItem(self.burn_line)
+                self.plot_widget.addItem(self.vLine, ignoreBounds=True)
+                self.plot_widget.addItem(self.hLine, ignoreBounds=True)
+                self.plot_widget.addItem(self.cursor_label, ignoreBounds=True)
                 if not self.is_burn_line_visible:
                     self.burn_line.hide()
                 else:
