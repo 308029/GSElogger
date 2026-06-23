@@ -1,6 +1,6 @@
-from analysis import RawConverter#!
-from dataanlysis import Logger
-from graphgenerator import graph_generator
+from raw_converter import RawDataConverter
+from thrust_analyzer import ThrustAnalyzer
+from graph_generator import GraphGenerator
 import pandas
 import os
 import time
@@ -28,12 +28,12 @@ os.makedirs(aboutdir, exist_ok=True)
 #解析
 print("Analysing raw data...")
 start = time.time()
-RawConverter(abrawfile, abredatafile,loadcell_max_lbf,loggertype).convert()
+RawDataConverter(abrawfile, abredatafile,loadcell_max_lbf,loggertype).convert()
 rawconvert_time = time.time() - start
 
 ml = ["推力[N]","補正推力[N]","平均推力[N]","偏差標準偏差[N]","圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]","低域温度1[℃]","低域温度2[℃]","低域温度3[℃]","高域温度1[℃]","高域温度2[℃]"]
 if mode=="full":
-    logger = Logger(abredatafile, aboutdir,"データ取得開始時","推力[N]")
+    logger = ThrustAnalyzer(abredatafile, aboutdir,"データ取得開始時","推力[N]")
 
     start = time.time()
     print("Analysing converted data...")
@@ -50,7 +50,7 @@ if mode=="full":
     print("作動時間トータルインパルス",round(op,1),"N・s")
     print("----------")
 
-    graph = graph_generator(aboutdir, logger.bdf, "データ取得開始時")
+    graph = GraphGenerator(aboutdir, logger.bdf, "データ取得開始時")
     print("Creating graphs...")
     start = time.time()
     graph.generate_graph_from_series(logger.df["データ取得開始時"][::1000],logger.df["推力[N]"][::1000],"全体推力[N]")
@@ -63,6 +63,11 @@ if mode=="full":
     graph.generate_overview_graph("データ取得開始時","推力[N]",["圧力1[Pa]"],logger.burn_end_time,operationendrelative,logger.operating_totalimpulse, logger.burn_totalimpulse,date)
     graph.generate_overview_graph("データ取得開始時","平均推力[N]",["平均圧力1[Pa]"],logger.burn_end_time,operationendrelative,logger.operating_totalimpulse,logger.burn_totalimpulse,date)
     graph.generate_overview_graph("データ取得開始時","補正推力[N]",None,logger.burn_end_time,operationendrelative,logger.operating_totalimpulse,logger.burn_totalimpulse,date)
+
+    # 周波数解析ヒートマップの生成
+    print("Creating frequency analysis heatmap...")
+    heatmap_path = os.path.join(aboutdir, "推力周波数解析ヒートマップ.png")
+    graph.generate_thrust_heatmap("推力[N]", logger.burn_end_time, heatmap_path)
 
     print("raw解析時間: {}s\nデータ分析時間: {}s \nグラフ生成時間: {}s".format(rawconvert_time, analyzing_time, generate_graph_time))
 elif mode=="manual":
