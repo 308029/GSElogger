@@ -745,7 +745,8 @@ class ThrustAnalyzerGUI(QWidget):
                 "推力[N]", "補正推力[N]", "平均推力[N]", "偏差標準偏差[N]",
                 "圧力1[Pa]", "圧力2[Pa]", "圧力3[Pa]", "圧力4[Pa]",
                 "低域温度1[℃]", "低域温度2[℃]", "低域温度3[℃]", 
-                "高域温度1[℃]", "高域温度2[℃]"
+                "高域温度1[℃]", "高域温度2[℃]",
+                "温度1[℃]", "温度2[℃]", "温度3[℃]", "温度4[℃]", "温度5[℃]", "温度6[℃]"
             ]
             cols_to_plot = [col for col in logger.bdf.columns if col in allowed_cols]
             total_cols = len(cols_to_plot)
@@ -861,7 +862,8 @@ class ThrustAnalyzerGUI(QWidget):
             abrawfile = self.rawfile_input.text()
             loggertype = self.loggertype_combo.currentText()
             if abrawfile and os.path.exists(abrawfile):
-                rc = RawDataConverter(abrawfile, os.path.join(aboutdir, "converted.csv"), 500, loggertype)
+                loadcell_max_lbf = int(self.loadcell_combo.currentText())
+                rc = RawDataConverter(abrawfile, os.path.join(aboutdir, "converted.csv"), loadcell_max_lbf, loggertype)
                 rc.create_light()
                 
             QMessageBox.information(self, "成功", f"以下のCSVファイルを出力しました:\n・LOG_light.csv\n・burntime.csv\n・onlythurst.csv\n\n出力先:\n{aboutdir}")

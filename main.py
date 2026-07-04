@@ -31,7 +31,12 @@ start = time.time()
 RawDataConverter(abrawfile, abredatafile,loadcell_max_lbf,loggertype).convert()
 rawconvert_time = time.time() - start
 
-ml = ["推力[N]","補正推力[N]","平均推力[N]","偏差標準偏差[N]","圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]","低域温度1[℃]","低域温度2[℃]","低域温度3[℃]","高域温度1[℃]","高域温度2[℃]"]
+if loggertype == "new":
+    temp_cols = ["温度1[℃]", "温度2[℃]", "温度3[℃]", "温度4[℃]", "温度5[℃]", "温度6[℃]"]
+else:
+    temp_cols = ["低域温度1[℃]", "低域温度2[℃]", "低域温度3[℃]", "高域温度1[℃]", "高域温度2[℃]"]
+
+ml = ["推力[N]","補正推力[N]","平均推力[N]","偏差標準偏差[N]","圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]"] + temp_cols
 if mode=="full":
     logger = ThrustAnalyzer(abredatafile, aboutdir,"データ取得開始時","推力[N]")
 
@@ -56,7 +61,7 @@ if mode=="full":
     graph.generate_graph_from_series(logger.df["データ取得開始時"][::1000],logger.df["推力[N]"][::1000],"全体推力[N]")
     graph.generate_general_graph(["推力[N]","補正推力[N]","平均推力[N]","偏差標準偏差[N]"],"推力関連.png")
     graph.generate_general_graph(["圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]"],"圧力.png")
-    graph.generate_general_graph(["低域温度1[℃]","低域温度2[℃]","低域温度3[℃]","高域温度1[℃]","高域温度2[℃]"],"温度.png")
+    graph.generate_general_graph(temp_cols,"温度.png")
     generate_graph_time = time.time() - start
 
     operationendrelative = (logger.operation_end_time - logger.burn_start_time)/1000000
@@ -78,8 +83,8 @@ elif mode=="manual":
     if(endtime is not None):
         ccsv=ccsv[(ccsv["データ取得開始時"]<=endtime)]
     
-    graph = graph_generator(aboutdir, ccsv, "データ取得開始時")
+    graph = GraphGenerator(aboutdir, ccsv, "データ取得開始時")
     # graph.generate_graph_from_series()
     graph.generate_general_graph(["推力[N]"],"推力.png")
     graph.generate_general_graph(["圧力1[Pa]","圧力2[Pa]","圧力3[Pa]","圧力4[Pa]"],"圧力.png")
-    graph.generate_general_graph(["低域温度1[℃]","低域温度2[℃]","低域温度3[℃]","高域温度1[℃]","高域温度2[℃]"],"温度.png")
+    graph.generate_general_graph(temp_cols,"温度.png")

@@ -47,6 +47,22 @@ class RawDataConverter:
         t_kelvin = 1 / ((1 / B) * (rt / self.R0).log() + (1 / self.T0))
         return t_kelvin - 273.15
 
+    def temp_new(self, col_name):
+        """新ロガー用のサーミスタ温度の計算式（Polars Expression）を返す"""
+        adc_val = pl.col(col_name)
+        # r1 = 10000.0 * adc_val / 4095.0
+        r1 = 10000.0 * adc_val / 4095.0
+        
+        # log エラー・ゼロ・負数回避ガード
+        r1_safe = pl.when(r1 <= 1e-6).then(1e-6).otherwise(r1)
+        
+        R = 200000.0
+        B = 3500.0
+        T0 = 25.0 + 273.15
+        
+        t_kelvin = B / ((r1_safe / R).log() + B / T0)
+        return t_kelvin - 273.15
+
     # --- メイン処理 ---
     def convert(self):
         if self.loggertype == "new":
@@ -97,12 +113,12 @@ class RawDataConverter:
             self.pressure("column_5").alias("圧力2[Pa]"),
             self.pressure("column_6").alias("圧力3[Pa]"),
             self.pressure("column_7").alias("圧力4[Pa]"),
-            self.temp("column_10", self.HighTemp_R, self.Temp_B).alias("高域温度1[℃]"),
-            self.temp("column_11", self.HighTemp_R, self.Temp_B).alias("高域温度2[℃]"),
-            self.temp("column_12", self.HighTemp_R, self.Temp_B).alias("高域温度3[℃]"),
-            self.temp("column_13", self.LowTemp_R, self.Temp_B).alias("低域温度1[℃]"),
-            self.temp("column_14", self.LowTemp_R, self.Temp_B).alias("低域温度2[℃]"),
-            self.temp("column_15", self.LowTemp_R, self.Temp_B).alias("低域温度3[℃]")
+            self.temp_new("column_10").alias("温度1[℃]"),
+            self.temp_new("column_11").alias("温度2[℃]"),
+            self.temp_new("column_12").alias("温度3[℃]"),
+            self.temp_new("column_13").alias("温度4[℃]"),
+            self.temp_new("column_14").alias("温度5[℃]"),
+            self.temp_new("column_15").alias("温度6[℃]")
         ])
 
         df_result.write_csv(self.outputfile, include_bom=True)

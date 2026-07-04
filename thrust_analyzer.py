@@ -64,7 +64,7 @@ class ThrustAnalyzer:
         # グラフ表示用に前後0.5秒(500,000us)のバッファを持たせた範囲を切り出す
         self.bdf = self.df[(self.df[self.time_name] > self.burn_start_time - 500000) & (self.df[self.time_name] < self.operation_end_time + 500000)].copy()
         # 厳密な積分およびCSV出力用の区間
-        self.bbdf = self.df[(self.df[self.time_name] >= self.burn_start_time) & (self.df[self.time_name] <= self.operation_end_time)][[self.time_name, correct_thurst_name]].copy()
+        self.bbdf = self.df[(self.df[self.time_name] >= self.burn_start_time-1) & (self.df[self.time_name] <= self.operation_end_time)][[self.time_name, correct_thurst_name]].copy()
 
         # 時間軸の調整（燃焼開始時刻を0秒とした相対秒へ変換）
         self.bdf[self.time_name] = (self.bdf[self.time_name] - self.burn_start_time) / 1000000.0
@@ -80,7 +80,7 @@ class ThrustAnalyzer:
         for name, group in groups:
             if group.iloc[0] and len(group) >= 10:
                 return self.df.loc[group.index[0], self.time_name]
-        return 0
+        return self.df[self.time_name].iloc[0]
 
     def calcu_burn_end_time(self, average_thrust_name):
         self.bdf["偏差[N]"] = self.bdf[self.thrust_name] - self.bdf[average_thrust_name]
@@ -93,7 +93,9 @@ class ThrustAnalyzer:
     
     def calcu_operation_end_time(self, correct_thurst_name):
         mask = self.df[correct_thurst_name] > self.df[correct_thurst_name].max() * 0.05
-        return self.df[mask].iloc[-1][self.time_name]
+        if not self.df[mask].empty:
+            return self.df[mask].iloc[-1][self.time_name]
+        return self.df[self.time_name].iloc[-1]
 
     def calcu_totalimpulse(self, correct_thurst_name):
         # 各行の時間差分を秒単位で計算して高精度に数値積分
