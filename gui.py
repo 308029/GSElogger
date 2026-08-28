@@ -7,7 +7,7 @@ import shutil
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QFormLayout, QLineEdit, QPushButton, QComboBox, QFileDialog,
                              QMessageBox, QLabel, QDialog, QListWidget, QListWidgetItem, QSplitter,
-                             QProgressDialog)
+                             QProgressDialog, QCheckBox)
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt, QSize
 
@@ -194,6 +194,7 @@ class ThrustAnalyzerGUI(QWidget):
         layout.addWidget(QLabel("Rawデータファイル (CSV):"))
         rawfile_layout = QHBoxLayout()
         self.rawfile_input = QLineEdit()
+        self.rawfile_input.textChanged.connect(self.update_outdir_from_rawfile)
         self.rawfile_btn = QPushButton("参照")
         self.rawfile_btn.clicked.connect(self.browse_rawfile)
         rawfile_layout.addWidget(self.rawfile_input)
@@ -265,6 +266,7 @@ class ThrustAnalyzerGUI(QWidget):
         # 解析結果表示用ラベル
         self.result_label = QLabel(
             "【解析結果】\n"
+            "サンプリング周波数: -\n"
             "定常偏差: -\n"
             "燃焼時間: -\n"
             "作動時間: -\n"
@@ -286,6 +288,11 @@ class ThrustAnalyzerGUI(QWidget):
         outdir_layout.addWidget(self.outdir_input)
         outdir_layout.addWidget(self.outdir_btn)
         layout.addLayout(outdir_layout)
+
+        # 「自動で全ての画像を保存」チェックボックス
+        self.auto_save_chk = QCheckBox("自動で全ての画像を保存")
+        self.auto_save_chk.setStyleSheet("font-weight: bold; padding: 2px;")
+        layout.addWidget(self.auto_save_chk)
 
         # Run / Refer Buttons Layout
         run_layout = QHBoxLayout()
@@ -401,13 +408,23 @@ class ThrustAnalyzerGUI(QWidget):
         else:
             self.run_btn.setEnabled(False)
 
+    def update_outdir_from_rawfile(self, text):
+        file_path = text.strip()
+        if file_path:
+            dir_name = os.path.dirname(file_path)
+            if dir_name:
+                self.outdir_input.setText(os.path.join(dir_name, "report"))
+            else:
+                self.outdir_input.setText("report")
+        else:
+            self.outdir_input.clear()
+
     def browse_rawfile(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Rawデータファイルを選択", "", "CSVファイル (*.csv);;すべてのファイル (*)")
         if file_path:
             self.rawfile_input.setText(file_path)
-            if not self.outdir_input.text():
-                # 生データと同じディレクトリ内に out フォルダを作るように初期設定
-                self.outdir_input.setText(os.path.join(os.path.dirname(file_path), "out"))
+            # 生データと同じディレクトリ内に report フォルダを作るように自動設定
+            self.outdir_input.setText(os.path.join(os.path.dirname(file_path), "report"))
 
     def browse_outdir(self):
         dir_path = QFileDialog.getExistingDirectory(self, "出力先フォルダを選択")
@@ -740,6 +757,14 @@ class ThrustAnalyzerGUI(QWidget):
             image_paths_series = []
             image_paths_overview = []
 
+            # 補正推力、燃焼室圧、タンク圧を縦に並べた3段個別グラフを作成
+            stacked_filename = "推力_燃焼室圧_タンク圧.png"
+            try:
+                graph.generate_stacked_thrust_pressure_graph(stacked_filename)
+                image_paths_series.append(os.path.join(self.temp_dir, stacked_filename))
+            except Exception as e:
+                print(f"3段グラフ生成エラー: {e}")
+
             # データフレームに存在する列のうち、許可するものだけをdfの列の順序に従って抽出
             allowed_cols = [
                 "推力[N]", "補正推力[N]", "平均推力[N]", "偏差標準偏差[N]",
@@ -788,9 +813,19 @@ class ThrustAnalyzerGUI(QWidget):
             progress.setValue(90)
             QApplication.processEvents()
 
+            heatmap_paths = []
             heatmap_filename = "推力周波数解析ヒートマップ.png"
             heatmap_path = os.path.join(self.temp_dir, heatmap_filename)
-            graph.generate_thrust_heatmap("推力[N]", logger.burn_end_time, heatmap_path)
+            graph.generate_thrust_heatmap("推力[N]", logger.burn_end_time, heatmap_path, vmin=-40, vmax=40, is_pressure=False)
+            heatmap_paths.append(heatmap_path)
+
+            for i in range(1, 5):
+                p_col = f"圧力{i}[Pa]"
+                if p_col in logger.bdf.columns:
+                    p_filename = f"圧力{i}_周波数解析ヒートマップ.png"
+                    p_path = os.path.join(self.temp_dir, p_filename)
+                    graph.generate_thrust_heatmap(p_col, logger.burn_end_time, p_path, vmin=-40, vmax=40, is_pressure=True)
+                    heatmap_paths.append(p_path)
 
             progress.setValue(100)
             QApplication.processEvents()
@@ -799,6 +834,7 @@ class ThrustAnalyzerGUI(QWidget):
             result_txt_path = os.path.join(aboutdir, "analysis_results.txt")
             try:
                 with open(result_txt_path, "w", encoding="utf-8") as f:
+                    f.write(f"サンプリング周波数[kHz]: {logger.fs_khz}\n")
                     f.write(f"定常偏差[N]: {logger.ess}\n")
                     f.write(f"燃焼開始時間[us]: {logger.burn_start_time}\n")
                     f.write(f"作動終了時間[us]: {logger.operation_end_time}\n")
@@ -814,6 +850,7 @@ class ThrustAnalyzerGUI(QWidget):
 
             self.result_label.setText(
                 f"【解析結果】\n"
+                f"サンプリング周波数: {round(logger.fs_khz, 2)} kHz\n"
                 f"定常偏差: {round(logger.ess, 1)} N\n"
                 f"燃焼時間: {round(logger.burn_end_time, 3)} s\n"
                 f"作動時間: {round(operationendrelative, 3)} s\n"
@@ -828,13 +865,25 @@ class ThrustAnalyzerGUI(QWidget):
             self.image_paths_dict = {
                 "個別グラフ": image_paths_series,
                 "概要グラフ": image_paths_overview,
-                "周波数解析": [heatmap_path]
+                "周波数解析": heatmap_paths
             }
             self.save_csv_btn.setEnabled(True)
             self.show_images_btn.setEnabled(True)
             
-            # メッセージボックスの代わりにステータスラベルを更新
-            self.status_label.setText("ステータス: 解析が終了しました。(結果を自動保存しました)")
+            # 「自動で全ての画像を保存」がチェックされている場合は全画像を自動保存
+            if self.auto_save_chk.isChecked():
+                saved_count = 0
+                for cat, paths in self.image_paths_dict.items():
+                    for src_path in paths:
+                        if src_path and os.path.exists(src_path):
+                            try:
+                                shutil.copy(src_path, aboutdir)
+                                saved_count += 1
+                            except Exception as e:
+                                print(f"自動保存エラー ({src_path}): {e}")
+                self.status_label.setText(f"ステータス: 解析が終了しました。(全画像{saved_count}枚を自動保存しました)")
+            else:
+                self.status_label.setText("ステータス: 解析が終了しました。(結果を自動保存しました)")
             self.status_label.setStyleSheet("font-weight: bold; color: green; padding: 2px;")
 
         except Exception as e:
@@ -888,7 +937,6 @@ class ThrustAnalyzerGUI(QWidget):
             return
             
         try:
-            # Parse the file
             data = {}
             with open(file_path, "r", encoding="utf-8") as f:
                 for line in f:
@@ -900,10 +948,12 @@ class ThrustAnalyzerGUI(QWidget):
                         # Clean values
                         val_str = parts[1].strip()
                         cleaned_val = val_str.replace("N・s", "").replace("N·s", "").replace("Ns", "")
-                        cleaned_val = cleaned_val.replace("N", "").replace("s", "").replace("us", "").strip()
+                        cleaned_val = cleaned_val.replace("N", "").replace("s", "").replace("us", "").replace("kHz", "").strip()
                         data[norm_key] = cleaned_val
             
             # Extract values
+            fs_khz_val = data.get("サンプリング周波数", None)
+            fs_khz = float(fs_khz_val) if fs_khz_val is not None else None
             ess = float(data.get("定常偏差", 0.0))
             burn_start_time = float(data.get("燃焼開始時間", 0.0))
             operation_end_time = float(data.get("作動終了時間", 0.0))

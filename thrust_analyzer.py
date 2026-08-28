@@ -11,6 +11,18 @@ class ThrustAnalyzer:
         self.bdf = None  # 燃焼前後のバッファを含むDataFrame
         self.bbdf = None # 厳密な作動区間のみのDataFrame
 
+        # サンプリング周波数の算出 (時間軸はus)
+        time_diffs = self.df[self.time_name].diff().dropna()
+        median_dt_us = time_diffs.median()
+        if median_dt_us and median_dt_us > 0:
+            self.dt_sec = median_dt_us / 1000000.0
+            self.fs_hz = 1.0 / self.dt_sec
+            self.fs_khz = self.fs_hz / 1000.0
+        else:
+            self.dt_sec = 0.001
+            self.fs_hz = 1000.0
+            self.fs_khz = 1.0
+
         # 各チャンネルの移動平均を算出
         self.calcu_moving_ave("推力[N]", "平均推力[N]")
         self.calcu_moving_ave("圧力1[Pa]", "平均圧力1[Pa]")
